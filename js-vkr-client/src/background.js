@@ -113,6 +113,7 @@ ipcMain.on("save-video", async (event, path, buffer) => {
     let buf = null;
     fileStream.on("data", (chunk) => {
       if (chunk) {
+
         if (buf) {
           buf = Buffer.concat([buf, chunk]);
         } else {
@@ -120,6 +121,11 @@ ipcMain.on("save-video", async (event, path, buffer) => {
         }
 
         let pos = 0;
+
+        // while (pos < buf.length)
+        // {
+          
+        // }
 
         while (!is_one_3bytes(buf, pos) && !is_one_4bytes(buf, pos)) {
           ++pos;
@@ -182,6 +188,8 @@ ipcMain.on("save-video", async (event, path, buffer) => {
         buf.copy(tmp, 0, finish);
         buf = tmp;
 
+        console.log(target.length);
+
         client.send(target, 0, target.length, 41234, "0.0.0.0", function(
           err,
           bytes
@@ -189,9 +197,9 @@ ipcMain.on("save-video", async (event, path, buffer) => {
           if (err) throw err;
           console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
           event.reply("on-video-save");
-          
         });
       }
+      
     });
   } catch (error) {
     console.log("error", error);

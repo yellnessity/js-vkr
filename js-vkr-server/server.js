@@ -4,6 +4,7 @@ const server = require("http").Server(app);
 const io = require("socket.io")(server);
 const dgram = require('dgram');
 const cors = require('cors');
+const fs = require("fs");
 
 const socket = dgram.createSocket('udp4');
 // app.set("view engine", "ejs");
@@ -28,8 +29,18 @@ socket.on('listening', () => {
   console.log(`server udp listening ${address.address}:${address.port}`);
 });
 
+let buf = null;
+
 socket.on('message', (msg, rinfo) => {
   console.log(`server udp got a message from ${rinfo.address}:${rinfo.port}`);
+  const fileStream = fs.createWriteStream('video.h264');
+  if (buf) {
+    buf = Buffer.concat([buf, msg]);
+  } else {
+    buf = msg;
+  }
+  console.log(buf.length);
+  fileStream.write(buf);
 });
 
 // io.on("connection", (socket) => {

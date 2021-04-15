@@ -13,7 +13,6 @@
   },
   "main": "background.js",
   "dependencies": {
-    "core-js": "^3.6.5",
     "fs-extra": "^9.1.0",
     "handbrake-js": "^5.0.2",
     "videojs-record": "^4.3.0",
