@@ -3,5 +3,7 @@ js-vkr-client/node_modules
 js-vkr-client/dist
 js-vkr-client/dist_electron
 js-vkr-server/node_modules
-*.mp4
-*.h264
+js-vkr-server/*.mp4
+js-vkr-server/*.h264
+js-vkr-client/*.mp4
+js-vkr-client/*.h264
