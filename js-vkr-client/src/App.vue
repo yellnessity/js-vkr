@@ -7,9 +7,11 @@
       @finishedRecord="onFinishedRecord"
       id="video"
     />
-    <button @click="playTrigger = true">Перезапуск</button>
+    <button @click="reload">Перезапуск</button>
     <button @click="recordTrigger = true">Записать</button>
     <button @click="saveVideo">Отправить</button>
+    <p v-if="loading">Идёт отправка...</p>
+    <p v-if="loaded">Видео отправлено.</p>
   </div>
 </template>
 
@@ -28,6 +30,8 @@ export default {
       playTrigger: false,
       recordTrigger: false,
       file: null,
+      loading: false,
+      loaded: false
     };
   },
   mounted() {},
@@ -39,7 +43,15 @@ export default {
       this.file = video;
       console.log("video recorded", video);
     },
+    reload() {
+      this.loaded = false;
+      this.loading = false;
+      this.recordTrigger = false;
+      this.playTrigger = true
+    },
     saveVideo() {
+      this.loading = true;
+      this.loaded = false;
       let reader = new FileReader();
       reader.onload = function() {
         if (reader.readyState == 2) {
@@ -48,6 +60,8 @@ export default {
         }
       };
       ipcRenderer.on("on-video-save", () => {
+        this.loading = false;
+        this.loaded = true;
         console.log('video have been saved')
       });
       reader.readAsArrayBuffer(this.file);

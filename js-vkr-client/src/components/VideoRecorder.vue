@@ -13,7 +13,6 @@ import videojs from "video.js";
 
 import "webrtc-adapter";
 import RecordRTC from "recordrtc";
-
 import Record from "videojs-record/dist/videojs.record.js";
 
 export default {
