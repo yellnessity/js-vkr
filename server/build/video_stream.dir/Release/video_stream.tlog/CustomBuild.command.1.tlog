@@ -1,0 +1,10 @@
+^C:\USERS\USER\DESKTOP\DEVELOPMENT\VIDEO_STREAM_JS\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/User/Desktop/development/video_stream_js -BC:/Users/User/Desktop/development/video_stream_js/build --check-stamp-file C:/Users/User/Desktop/development/video_stream_js/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

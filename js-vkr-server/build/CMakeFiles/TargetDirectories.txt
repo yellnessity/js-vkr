@@ -1,3 +1,0 @@
-C:/Users/User/Desktop/development/video_stream_js/build/CMakeFiles/video_stream.dir
-C:/Users/User/Desktop/development/video_stream_js/build/CMakeFiles/ALL_BUILD.dir
-C:/Users/User/Desktop/development/video_stream_js/build/CMakeFiles/ZERO_CHECK.dir
