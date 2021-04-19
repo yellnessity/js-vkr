@@ -1,6 +1,10 @@
 <template>
   <div class="video-container">
-    <video id='videoRecord' class="video-js vjs-default-skin" playsinline></video>
+    <video
+      id="videoRecord"
+      class="video-js vjs-default-skin"
+      playsinline
+    ></video>
   </div>
 </template>
 
@@ -33,6 +37,7 @@ export default {
         autoplay: true,
         loop: false,
         bigPlayButton: false,
+        timeSlice: 1000,
         controlBar: {
           fullscreenToggle: false,
           volumePanel: false,
@@ -42,10 +47,11 @@ export default {
           record: {
             audio: false,
             pip: false,
-            maxLength: 2,
+            maxLength: 5,
             video: true,
-            debug: false,
+            debug: true,
             videoMimeType: "video/webm;codecs=H264",
+            timeSlice: 1000
           },
         },
       },
@@ -101,9 +107,19 @@ export default {
       console.log("started recording!");
     });
 
-    // this.player.on("progressRecord", (data) => {
-    //   console.log(data);
-    // })
+    // monitor stream data during recording
+    this.player.on('timestamp', () => {
+        // timestamps
+        console.log('current timestamp: ', this.player.currentTimestamp);
+        console.log('all timestamps: ', this.player.allTimestamps);
+
+        // stream data
+        console.log('array of blobs: ', this.player.recordedData);
+        // or construct a single blob:
+        // var blob = new Blob(blobs, {
+        //     type: 'video/webm'
+        // });
+    });
 
     // user completed recording and stream is available
     this.player.on("finishRecord", () => {
@@ -155,7 +171,7 @@ export default {
 
 <style>
 .video-container {
-    display: flex;
-    justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 </style>
