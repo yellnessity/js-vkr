@@ -39,9 +39,15 @@ socket.on('message', (msg, rinfo) => {
   // } else {
   //   buf = msg;
   // }
-  console.log(msg.length);
-  console.log(msg);
-  fileStream.write(msg); // end stream on msg about ending 
+  if (msg.toString() !== 'end') {
+    console.log(msg.length);
+    console.log(msg);
+    fileStream.write(msg);
+  }
+  else {
+    console.log(msg.toString())
+    fileStream.end();  // end stream on msg about ending
+  }
 });
 
 // io.on("connection", (socket) => {

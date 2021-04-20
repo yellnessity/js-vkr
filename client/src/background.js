@@ -6,7 +6,7 @@ import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 const fs = require("fs");
 const fse = require("fs-extra");
 var dgram = require("dgram");
-const { pipeline } = require("stream");
+const { Readable } = require("stream");
 const hbjs = require("handbrake-js");
 
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -18,7 +18,8 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { secure: true, standard: true } },
 ]);
 
-async function createWindow() {
+async function createWindow()
+{
   // Create the browser window.
   const win = new BrowserWindow({
     width: 1500,
@@ -34,10 +35,12 @@ async function createWindow() {
 
   win.setTitle("VKR-client");
 
-  if (process.env.WEBPACK_DEV_SERVER_URL) {
+  if (process.env.WEBPACK_DEV_SERVER_URL)
+  {
     // Load the url of the dev server if in development mode
     await win.loadURL(process.env.WEBPACK_DEV_SERVER_URL);
-  } else {
+  } else
+  {
     createProtocol("app");
     // Load the index.html when not in development
     win.loadURL("app://./index.html");
@@ -46,39 +49,42 @@ async function createWindow() {
 
 function is_one_3bytes(buf, pos)
 {
-    if ((buf[pos] == 0)
-        && (buf[pos + 1] == 0)
-        && (buf[pos + 2] == 1))
-    {
-        return true;
-    }
+  if ((buf[pos] == 0)
+    && (buf[pos + 1] == 0)
+    && (buf[pos + 2] == 1))
+  {
+    return true;
+  }
 
-    return false;
+  return false;
 }
 
 function is_one_4bytes(buf, pos)
 {
-    if ((buf[pos] == 0)
-        && (buf[pos + 1] == 0)
-        && (buf[pos + 2] == 0)
-        && (buf[pos + 3] == 1))
-    {
-        return true;
-    }
+  if ((buf[pos] == 0)
+    && (buf[pos + 1] == 0)
+    && (buf[pos + 2] == 0)
+    && (buf[pos + 3] == 1))
+  {
+    return true;
+  }
 
-    return false;
+  return false;
 }
 
 // Quit when all windows are closed.
-app.on("window-all-closed", () => {
+app.on("window-all-closed", () =>
+{
   // On macOS it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== "darwin") {
+  if (process.platform !== "darwin")
+  {
     app.quit();
   }
 });
 
-app.on("activate", () => {
+app.on("activate", () =>
+{
   // On macOS it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -87,139 +93,194 @@ app.on("activate", () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on("ready", async () => {
-  if (isDevelopment && !process.env.IS_TEST) {
+app.on("ready", async () =>
+{
+  if (isDevelopment && !process.env.IS_TEST)
+  {
     // Install Vue Devtools
-    try {
+    try
+    {
       await installExtension(VUEJS_DEVTOOLS);
-    } catch (e) {
+    } catch (e)
+    {
       console.error("Vue Devtools failed to install:", e.toString());
     }
   }
   createWindow();
 });
 
-ipcMain.on("save-video", async (event, path, buffer) => {
-  try {
-    // await fse.outputFile(path, buffer);
-    // console.log("video saved");
-    // await hbjs
-    //   .run({ input: buffer, output: "something.h264" });
-    console.log(buffer);
-      // .on("progress", (progress) => {
-      //   console.log("Progress: ", progress);
-      // });
-    // const message = new Buffer.from('My KungFu is Good!');
-    // const fileStream = fs.createReadStream("something.h264");
-    // let buf = null;
-    // fileStream.on("data", (chunk) => {
-    //   if (chunk) {
+let buf = null;
+let counter = 0;
 
-    //     if (buf) {
-    //       buf = Buffer.concat([buf, chunk]);
-    //     } else {
-    //       buf = chunk;
-    //     }
+ipcMain.on("process-blob", (event, buffer) =>
+{
+  try
+  {
+    console.log(buffer.length);
+    const fileStream = new Readable();
+    fileStream._read = () => { };
+    fileStream.push(buffer);
+    fileStream.push(null);
+    fileStream.on("data", (chunk) =>
+    {
+      console.log("chunk: ", chunk.length);
+      if (chunk)
+      {
+        if (buf)
+        {
+          buf = Buffer.concat([buf, chunk]);
+        } else
+        {
+          buf = chunk;
+        }
 
-    //     let pos = 0;
+        let pos = 0;
 
-    //     // while (pos < buf.length)
-    //     // {
-          
-    //     // }
+        // while (pos < buf.length)
+        // {
 
-    //     while (!is_one_3bytes(buf, pos) && !is_one_4bytes(buf, pos)) {
-    //       ++pos;
-    //       if (pos >= buf.length) {
-    //         return;
-    //       }
-    //     }
+        // }
 
-    //     let start = pos;
+        while (!is_one_3bytes(buf, pos) && !is_one_4bytes(buf, pos))
+        {
+          ++pos;
+          if (pos >= buf.length)
+          {
+            return;
+          }
+        }
 
-    //     if (!is_one_3bytes(buf, pos)) {
-    //       ++pos;
-    //       if (pos >= buf.length) {
-    //         return;
-    //       }
-    //     }
+        let start = pos;
 
-    //     if (!is_one_3bytes(buf, pos)) {
-    //       throw new Error("start_code_prefix_one_3bytes");
-    //     }
+        if (!is_one_3bytes(buf, pos))
+        {
+          ++pos;
+          if (pos >= buf.length)
+          {
+            return;
+          }
+        }
 
-    //     pos += 3;
-    //     if (pos >= buf.length) {
-    //       return;
-    //     }
+        if (!is_one_3bytes(buf, pos))
+        {
+          throw new Error("start_code_prefix_one_3bytes");
+        }
 
-    //     let header = buf[pos];
-    //     // let obj = {
-    //     //   forbidden_zero_bit: (header & 0x80) >> 7,
-    //     //   nal_ref_idc: (header & 0x60) >> 5,
-    //     //   nal_unit_type: header & 0x1f,
-    //     // };
-    //     // console.log(
-    //     //   "0x" + numPadding(pos, 8, "0", 16),
-    //     //   "0x" + numPadding(header, 2, "0", 16),
-    //     //   obj,
-    //     //   nal_type_to_string(obj.nal_unit_type)
-    //     // );
-    //     ++pos;
-    //     if (pos >= buf.length) {
-    //       return;
-    //     }
+        pos += 3;
+        if (pos >= buf.length)
+        {
+          return;
+        }
 
-    //     while (
-    //       !is_one_3bytes(buf, pos) &&
-    //       !is_one_4bytes(buf, pos) &&
-    //       pos < buf.length
-    //     ) {
-    //       ++pos;
-    //       if (pos >= buf.length) {
-    //         return;
-    //       }
-    //     }
+        let header = buf[pos];
+        // let obj = {
+        //   forbidden_zero_bit: (header & 0x80) >> 7,
+        //   nal_ref_idc: (header & 0x60) >> 5,
+        //   nal_unit_type: header & 0x1f,
+        // };
+        // console.log(
+        //   "0x" + numPadding(pos, 8, "0", 16),
+        //   "0x" + numPadding(header, 2, "0", 16),
+        //   obj,
+        //   nal_type_to_string(obj.nal_unit_type)
+        // );
+        ++pos;
+        if (pos >= buf.length)
+        {
+          return;
+        }
 
-    //     let finish = pos;
-    //     let target = Buffer.alloc(finish - start); // + 4 bytes для обозначения порядка фрейма
-    //     buf.copy(target, 0, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
+        while (
+          !is_one_3bytes(buf, pos) &&
+          !is_one_4bytes(buf, pos) &&
+          pos < buf.length
+        )
+        {
+          ++pos;
+          if (pos >= buf.length)
+          {
+            return;
+          }
+        }
 
-    //     let tmp = Buffer.alloc(buf.length - finish);
-    //     buf.copy(tmp, 0, finish);
-    //     buf = tmp;
+        let finish = pos;
 
-    //     console.log(target.length);
+        counter++;
+        let target = Buffer.alloc(finish - start + 4); // + 4 bytes для обозначения порядка фрейма
+        target.writeInt32BE(counter, 0);
+        buf.copy(target, 4, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
 
-    //     // вывести target проверить запись порядка фрейма
+        let tmp = Buffer.alloc(buf.length - finish);
+        buf.copy(tmp, 0, finish);
+        buf = tmp;
 
-    //     client.send(target, 0, target.length, 41234, "0.0.0.0", function(
-    //       err,
-    //       bytes
-    //     ) {
-    //       if (err) throw err;
-    //       console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
-    //       event.reply("on-video-save");
-    //     });
-    //   }
-    //   // emit an event to server about the end of stream to close the writeStream
-    // });
-  } catch (error) {
+        console.log('target: ', target);
+        console.log('start: ', start);
+        console.log('finish: ', finish);
+        console.log('counter: ', counter);
+
+        // вывести target проверить запись порядка фрейма
+
+        client.send(target, 0, target.length, 41234, "0.0.0.0", function(
+          err,
+          bytes
+        )
+        {
+          if (err) throw err;
+          console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+        });
+      }
+    });
+  } catch (error)
+  {
+    console.log(error);
+  }
+});
+
+ipcMain.on("on-finish-record", (event) => {
+  counter = 0;
+  client.send('end', 41234, "0.0.0.0", function(
+    err,
+    bytes
+  )
+  {
+    if (err) throw err;
+    console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+  });
+});
+
+ipcMain.on("save-video", async (event, path, buffer) =>
+{
+  try
+  {
+    await fse.outputFile(path, buffer);
+    console.log("video saved");
+    await hbjs
+      .run({ input: buffer, output: "something.h264" });
+    counter = 0;
+  } catch (error)
+  {
     console.log("error", error);
   }
 });
 
 // Exit cleanly on request from parent process in development mode.
-if (isDevelopment) {
-  if (process.platform === "win32") {
-    process.on("message", (data) => {
-      if (data === "graceful-exit") {
+if (isDevelopment)
+{
+  if (process.platform === "win32")
+  {
+    process.on("message", (data) =>
+    {
+      if (data === "graceful-exit")
+      {
         client.close();
         app.quit();
       }
     });
-  } else {
-    process.on("SIGTERM", () => {
+  } else
+  {
+    process.on("SIGTERM", () =>
+    {
       client.close();
       app.quit();
     });

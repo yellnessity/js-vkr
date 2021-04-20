@@ -22,8 +22,14 @@ import Record from "videojs-record/dist/videojs.record.js";
 export default {
   name: "VideoRecorder",
   props: {
-    recordTrigger: Boolean,
-    playTrigger: Boolean,
+    recordTrigger: {
+      type: Boolean,
+      default: false
+    },
+    playTrigger: {
+      type: Boolean,
+      default: false
+    },
   },
   data() {
     return {
@@ -37,7 +43,6 @@ export default {
         autoplay: true,
         loop: false,
         bigPlayButton: false,
-        timeSlice: 1000,
         controlBar: {
           fullscreenToggle: false,
           volumePanel: false,
@@ -51,6 +56,7 @@ export default {
             video: true,
             debug: true,
             videoMimeType: "video/webm;codecs=H264",
+            videoRecorderType: "MediaStreamRecorder",
             timeSlice: 1000
           },
         },
@@ -110,11 +116,15 @@ export default {
     // monitor stream data during recording
     this.player.on('timestamp', () => {
         // timestamps
-        console.log('current timestamp: ', this.player.currentTimestamp);
-        console.log('all timestamps: ', this.player.allTimestamps);
+        // console.log('current timestamp: ', this.player.currentTimestamp);
+        // console.log('all timestamps: ', this.player.allTimestamps);
 
         // stream data
-        console.log('array of blobs: ', this.player.recordedData);
+        // console.log('array of blobs: ', this.player.recordedData);
+
+        if (this.player.recordedData.length > 0) {
+          this.$emit("onBlob", this.player.recordedData[this.player.recordedData.length - 1]);
+        }
         // or construct a single blob:
         // var blob = new Blob(blobs, {
         //     type: 'video/webm'

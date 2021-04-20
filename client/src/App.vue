@@ -5,6 +5,7 @@
       :playTrigger="playTrigger"
       :recordTrigger="recordTrigger"
       @finishedRecord="onFinishedRecord"
+      @onBlob="processBlob"
       id="video"
     />
     <button @click="reload">Перезапуск</button>
@@ -42,6 +43,7 @@ export default {
     onFinishedRecord(video) {
       this.file = video;
       console.log("video recorded", video);
+      ipcRenderer.send("on-finish-record");
     },
     reload() {
       this.loaded = false;
@@ -66,6 +68,17 @@ export default {
       });
       reader.readAsArrayBuffer(this.file);
     },
+    processBlob(blob) {
+      console.log("blob: ", blob.length);
+      let reader = new FileReader();
+      reader.onload = function() {
+        if (reader.readyState == 2) {
+          var buffer = new Buffer.from(reader.result);
+          ipcRenderer.send("process-blob", buffer);
+        }
+      };
+      reader.readAsArrayBuffer(blob);
+    }
   },
 };
 </script>
@@ -88,7 +101,7 @@ body {
 
 button {
   padding: .5rem 1rem;
-  margin: 1rem .5rem; 
+  margin: 1rem .5rem;
   background-color: #01c39e;
   border: none;
   border-radius: .2rem;
