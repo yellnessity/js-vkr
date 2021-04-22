@@ -122,9 +122,10 @@ export default {
         // stream data
         // console.log('array of blobs: ', this.player.recordedData);
 
-        if (this.player.recordedData.length > 0) {
-          this.$emit("onBlob", this.player.recordedData[this.player.recordedData.length - 1]);
+        if (this.player.recordedData.length === 1) {
+          this.$emit("onBlob", this.player.recordedData[0]);
         }
+
         // or construct a single blob:
         // var blob = new Blob(blobs, {
         //     type: 'video/webm'

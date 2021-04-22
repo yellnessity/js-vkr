@@ -72,6 +72,18 @@ function is_one_4bytes(buf, pos)
   return false;
 }
 
+function numPadding(num, paddingSize, value = ' ', radix = 10)
+{
+    let s = num.toString(radix);
+
+    while (s.length < paddingSize)
+    {
+        s = value + s;
+    }
+
+    return s;
+}
+
 // Quit when all windows are closed.
 app.on("window-all-closed", () =>
 {
@@ -109,7 +121,6 @@ app.on("ready", async () =>
   createWindow();
 });
 
-let buf = null;
 let counter = 0;
 
 ipcMain.on("process-blob", (event, buffer) =>
@@ -117,29 +128,26 @@ ipcMain.on("process-blob", (event, buffer) =>
   try
   {
     console.log(buffer.length);
+    let buf = null;
     const fileStream = new Readable();
     fileStream._read = () => { };
     fileStream.push(buffer);
     fileStream.push(null);
     fileStream.on("data", (chunk) =>
     {
+      let pos = 0;
       console.log("chunk: ", chunk.length);
-      if (chunk)
+      while (pos < chunk.length)
       {
-        if (buf)
+        if (pos >= chunk.length)
         {
-          buf = Buffer.concat([buf, chunk]);
-        } else
+          return;
+        }
+
+        if (!buf)
         {
           buf = chunk;
         }
-
-        let pos = 0;
-
-        // while (pos < buf.length)
-        // {
-
-        // }
 
         while (!is_one_3bytes(buf, pos) && !is_one_4bytes(buf, pos))
         {
@@ -173,17 +181,16 @@ ipcMain.on("process-blob", (event, buffer) =>
         }
 
         let header = buf[pos];
-        // let obj = {
-        //   forbidden_zero_bit: (header & 0x80) >> 7,
-        //   nal_ref_idc: (header & 0x60) >> 5,
-        //   nal_unit_type: header & 0x1f,
-        // };
-        // console.log(
-        //   "0x" + numPadding(pos, 8, "0", 16),
-        //   "0x" + numPadding(header, 2, "0", 16),
-        //   obj,
-        //   nal_type_to_string(obj.nal_unit_type)
-        // );
+        let obj = {
+            forbidden_zero_bit: (header & 0x80) >> 7,
+            nal_ref_idc: (header & 0x60) >> 5,
+            nal_unit_type: (header & 0x1F)
+        };
+        console.log(
+            '0x' + numPadding(pos, 8, '0', 16),
+            '0x' + numPadding(header, 2, '0', 16),
+            obj,
+        );
         ++pos;
         if (pos >= buf.length)
         {
@@ -215,9 +222,11 @@ ipcMain.on("process-blob", (event, buffer) =>
         buf = tmp;
 
         console.log('target: ', target);
+        console.log('target length: ', target.length);
         console.log('start: ', start);
         console.log('finish: ', finish);
         console.log('counter: ', counter);
+        console.log('bytes left: ', buf.length);
 
         // вывести target проверить запись порядка фрейма
 
@@ -227,9 +236,19 @@ ipcMain.on("process-blob", (event, buffer) =>
         )
         {
           if (err) throw err;
-          console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+          console.log("Fragment " + " sent to " + "0.0.0.0" + ":" + 41234);
         });
       }
+    });
+    fileStream.on("end", () => {
+      client.send('end', 41234, "0.0.0.0", function(
+        err,
+        bytes
+      )
+      {
+        if (err) throw err;
+        console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+      });
     });
   } catch (error)
   {
@@ -237,7 +256,8 @@ ipcMain.on("process-blob", (event, buffer) =>
   }
 });
 
-ipcMain.on("on-finish-record", (event) => {
+ipcMain.on("on-finish-record", (event) =>
+{
   counter = 0;
   client.send('end', 41234, "0.0.0.0", function(
     err,

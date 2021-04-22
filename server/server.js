@@ -30,23 +30,31 @@ socket.on('listening', () => {
 });
 
 let buf = null;
+let counter = 0;
+
 const fileStream = fs.createWriteStream('video.h264');
 
 socket.on('message', (msg, rinfo) => {
-  console.log(`server udp got a message from ${rinfo.address}:${rinfo.port}`);
   // if (buf) {
   //   buf = Buffer.concat([buf, msg]);
   // } else {
   //   buf = msg;
   // }
   if (msg.toString() !== 'end') {
-    console.log(msg.length);
-    console.log(msg);
+    counter++;
+    const fragmentNumber = msg.slice(0, 4);
+    console.log('message: ', msg);
+    console.log('message length: ', msg.length);
+    console.log('fragment number: ', fragmentNumber.readInt32BE());
+    console.log('counter: ', counter);
+    msg = msg.slice(4);
     fileStream.write(msg);
   }
   else {
-    console.log(msg.toString())
+    console.log(msg.toString());
+    counter = 0;
     fileStream.end();  // end stream on msg about ending
+    fileStream.close();
   }
 });
 
