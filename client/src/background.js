@@ -133,17 +133,11 @@ ipcMain.on("process-blob", (event, buffer) =>
     fileStream._read = () => { };
     fileStream.push(buffer);
     fileStream.push(null);
-    fileStream.on("data", (chunk) =>
-    {
+    fileStream.on("data", (chunk) => {
       let pos = 0;
       console.log("chunk: ", chunk.length);
       while (pos < chunk.length)
       {
-        if (pos >= chunk.length)
-        {
-          return;
-        }
-
         if (!buf)
         {
           buf = chunk;
@@ -186,6 +180,7 @@ ipcMain.on("process-blob", (event, buffer) =>
             nal_ref_idc: (header & 0x60) >> 5,
             nal_unit_type: (header & 0x1F)
         };
+        console.log('==================');
         console.log(
             '0x' + numPadding(pos, 8, '0', 16),
             '0x' + numPadding(header, 2, '0', 16),
@@ -259,14 +254,14 @@ ipcMain.on("process-blob", (event, buffer) =>
 ipcMain.on("on-finish-record", (event) =>
 {
   counter = 0;
-  client.send('end', 41234, "0.0.0.0", function(
-    err,
-    bytes
-  )
-  {
-    if (err) throw err;
-    console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
-  });
+  // client.send('end', 41234, "0.0.0.0", function(
+  //   err,
+  //   bytes
+  // )
+  // {
+  //   if (err) throw err;
+  //   console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+  // });
 });
 
 ipcMain.on("save-video", async (event, path, buffer) =>
@@ -275,8 +270,17 @@ ipcMain.on("save-video", async (event, path, buffer) =>
   {
     await fse.outputFile(path, buffer);
     console.log("video saved");
-    await hbjs
-      .run({ input: buffer, output: "something.h264" });
+    hbjs.spawn({ input: path, output: 'something.h264' })
+    .on('error', err => {
+      console.log(err);
+    })
+    .on('progress', progress => {
+      console.log(
+        'Percent complete: %s, ETA: %s',
+        progress.percentComplete,
+        progress.eta
+      )
+    });
     counter = 0;
   } catch (error)
   {

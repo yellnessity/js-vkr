@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="C:\Users\User\Desktop\development\video_stream_js\build\CMakeFiles\2dfb4c1579988378fac44add7fcd193c\generate.stamp.rule">
+    <CustomBuild Include="C:\Users\user\js-vkr\server\build\CMakeFiles\f825790e61525a671e978389178bffb0\generate.stamp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
-      <UniqueIdentifier>{912B7620-17E8-3271-A8BF-542035C29F94}</UniqueIdentifier>
+      <UniqueIdentifier>{C142F723-7109-33B3-922C-248DC3264B77}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

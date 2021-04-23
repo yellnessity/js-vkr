@@ -2,6 +2,9 @@ const express = require("express");
 const app = express();
 const server = require("http").Server(app);
 const io = require("socket.io")(server);
+const video_stream_js = require('./index');
+const cv = require('opencv4nodejs');
+const Decoder = new video_stream_js.Decoder(10);
 const dgram = require('dgram');
 const cors = require('cors');
 const fs = require("fs");
@@ -32,7 +35,7 @@ socket.on('listening', () => {
 let buf = null;
 let counter = 0;
 
-const fileStream = fs.createWriteStream('video.h264');
+// let writeStream = fs.createWriteStream('video.h264');
 
 socket.on('message', (msg, rinfo) => {
   // if (buf) {
@@ -40,23 +43,38 @@ socket.on('message', (msg, rinfo) => {
   // } else {
   //   buf = msg;
   // }
-  if (msg.toString() !== 'end') {
+  if (Buffer.isBuffer(msg) && msg.toString() !== 'end') {
     counter++;
     const fragmentNumber = msg.slice(0, 4);
+    console.log('===========');
     console.log('message: ', msg);
     console.log('message length: ', msg.length);
     console.log('fragment number: ', fragmentNumber.readInt32BE());
     console.log('counter: ', counter);
     msg = msg.slice(4);
-    fileStream.write(msg);
+
+    let frame = Decoder.decode(msg);
+    console.log('frame: ', frame);
+    if (frame)
+    {
+      const mat = new cv.Mat(frame.data, frame.height, frame.width, cv.CV_8UC1);
+      cv.imshow('img', mat);
+      cv.waitKey(33);
+    }
+
+    // writeStream.write(msg);
   }
   else {
     console.log(msg.toString());
     counter = 0;
-    fileStream.end();  // end stream on msg about ending
-    fileStream.close();
+    // writeStream.end();  // end stream on msg about ending
+    // fileStream.close();
   }
 });
+
+// writeStream.on('finish', () => {
+//   console.log('wrote all data to file');
+// });
 
 // io.on("connection", (socket) => {
 //   socket.on("join-room", (roomId, userId) => {

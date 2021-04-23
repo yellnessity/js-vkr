@@ -124,6 +124,7 @@ export default {
 
         if (this.player.recordedData.length === 1) {
           this.$emit("onBlob", this.player.recordedData[0]);
+          this.$emit("finishedRecord", this.player.recordedData[0]);
         }
 
         // or construct a single blob:
@@ -137,7 +138,7 @@ export default {
       // the blob object contains the recorded data that
       // can be downloaded by the user, stored on server etc.
       console.log("finished recording: ", this.player.recordedData);
-      this.$emit("finishedRecord", this.player.recordedData);
+      // this.$emit("finishedRecord", this.player.recordedData);
     });
 
     // error handling

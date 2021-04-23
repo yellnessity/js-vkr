@@ -3,6 +3,7 @@ client/node_modules
 client/dist
 client/dist_electron
 server/node_modules
+server/build
 server/*.mp4
 server/*.h264
 client/*.mp4
