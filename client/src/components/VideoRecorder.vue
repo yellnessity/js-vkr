@@ -19,6 +19,9 @@ import "webrtc-adapter";
 import RecordRTC from "recordrtc";
 import Record from "videojs-record/dist/videojs.record.js";
 
+import FFmpegWasmEngine from 'videojs-record/dist/plugins/videojs.record.ffmpeg-wasm.js';
+import FFmpeg from '../../node_modules/@ffmpeg/ffmpeg/dist/ffmpeg.min.js';
+
 export default {
   name: "VideoRecorder",
   props: {
@@ -55,9 +58,13 @@ export default {
             maxLength: 5,
             video: true,
             debug: true,
-            videoMimeType: "video/webm;codecs=H264",
-            videoRecorderType: "MediaStreamRecorder",
-            timeSlice: 1000
+            videoMimeType: "video/webm;codecs=h264",
+            timeSlice: 1000,
+            // convertEngine: 'ffmpeg.wasm',
+            // convertWorkerURL: '../../node_modules/@ffmpeg/core/dist/ffmpeg-core.js',
+            // pluginLibraryOptions: {
+            //     outputType: 'video/mp4'
+            // }
           },
         },
       },
@@ -122,10 +129,12 @@ export default {
         // stream data
         // console.log('array of blobs: ', this.player.recordedData);
 
-        if (this.player.recordedData.length === 1) {
-          this.$emit("onBlob", this.player.recordedData[0]);
-          this.$emit("finishedRecord", this.player.recordedData[0]);
-        }
+        // if (this.player.recordedData.length === 1) {
+        //   this.$emit("onBlob", this.player.recordedData[0]);
+        //   this.$emit("finishedRecord", this.player.recordedData[0]);
+        // }
+
+        console.log('the last blob ', this.player.recordedData.pop());
 
         // or construct a single blob:
         // var blob = new Blob(blobs, {
@@ -137,9 +146,13 @@ export default {
     this.player.on("finishRecord", () => {
       // the blob object contains the recorded data that
       // can be downloaded by the user, stored on server etc.
-      console.log("finished recording: ", this.player.recordedData);
+      console.log("finished recording: ");
       // this.$emit("finishedRecord", this.player.recordedData);
     });
+
+    this.player.on("startConvert", () => {
+      console.log('started converting');
+    })
 
     // error handling
     this.player.on("error", (element, error) => {

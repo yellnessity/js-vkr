@@ -13,10 +13,13 @@
   },
   "main": "background.js",
   "dependencies": {
+    "@ffmpeg/core": "^0.8.5",
+    "@ffmpeg/ffmpeg": "^0.9.7",
     "fs-extra": "^9.1.0",
     "handbrake-js": "^5.0.2",
     "videojs-record": "^4.3.0",
-    "vue": "^2.6.11"
+    "vue": "^2.6.11",
+    "ws": "^7.4.5"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",

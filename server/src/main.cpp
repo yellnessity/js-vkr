@@ -121,7 +121,7 @@ Napi::Value Decoder::Decode(const Napi::CallbackInfo& info)
 
     // for Decoding only
     iRet = pSvcDecoder->DecodeFrameNoDelay(pBuf, iSize, this->pData, &sDstBufInfo);
-    std::cout << "iRet: " << iRet << std::endl;
+    // std::cout << "iRet: " << iRet << std::endl;
 
     // decode failed
     if (iRet != 0)

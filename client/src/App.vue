@@ -58,7 +58,7 @@ export default {
       reader.onload = function() {
         if (reader.readyState == 2) {
           var buffer = new Buffer.from(reader.result);
-          ipcRenderer.send("save-video", 'video.mp4', buffer);
+          ipcRenderer.send("save-video", 'video.webm', buffer);
         }
       };
       ipcRenderer.on("on-video-save", () => {

@@ -8,6 +8,11 @@ const fse = require("fs-extra");
 var dgram = require("dgram");
 const { Readable } = require("stream");
 const hbjs = require("handbrake-js");
+const WebSocket = require("ws");
+
+const ws = new WebSocket('ws://localhost:5050/');
+
+let face = false;
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -83,6 +88,16 @@ function numPadding(num, paddingSize, value = ' ', radix = 10)
 
     return s;
 }
+
+ws.on('open', function open() {
+  ws.send('something');
+});
+
+ws.on('message', (data) => {
+  if (data === 'got face') {
+    face = true;
+  }
+});
 
 // Quit when all windows are closed.
 app.on("window-all-closed", () =>
@@ -186,7 +201,7 @@ ipcMain.on("process-blob", (event, buffer) =>
             '0x' + numPadding(header, 2, '0', 16),
             obj,
         );
-        ++pos;
+        ++pos;  // пропускаем header?
         if (pos >= buf.length)
         {
           return;
@@ -212,16 +227,23 @@ ipcMain.on("process-blob", (event, buffer) =>
         target.writeInt32BE(counter, 0);
         buf.copy(target, 4, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
 
-        let tmp = Buffer.alloc(buf.length - finish);
-        buf.copy(tmp, 0, finish);
-        buf = tmp;
+        // let tmp = Buffer.alloc(buf.length - finish);
+        // buf.copy(tmp, 0, finish);
+        // buf = tmp;
+        // if (counter <= 5) {
+        //   console.log('target: ', target);
+        //   console.log('target length: ', target.length);
+        //   console.log('start: ', start);
+        //   console.log('finish: ', finish);
+        //   console.log('counter: ', counter);
+        //   console.log('bytes left: ', buf.length);
+        // }
 
-        console.log('target: ', target);
-        console.log('target length: ', target.length);
-        console.log('start: ', start);
-        console.log('finish: ', finish);
-        console.log('counter: ', counter);
-        console.log('bytes left: ', buf.length);
+        if (face) {
+          console.log('face');
+        }
+
+        // console.log('tmp: ', buf);
 
         // вывести target проверить запись порядка фрейма
 
@@ -269,18 +291,18 @@ ipcMain.on("save-video", async (event, path, buffer) =>
   try
   {
     await fse.outputFile(path, buffer);
-    console.log("video saved");
-    hbjs.spawn({ input: path, output: 'something.h264' })
-    .on('error', err => {
-      console.log(err);
-    })
-    .on('progress', progress => {
-      console.log(
-        'Percent complete: %s, ETA: %s',
-        progress.percentComplete,
-        progress.eta
-      )
-    });
+    console.log("video saved, buffer length: ", buffer.length);
+    // hbjs.spawn({ input: path, output: 'something.h264' })
+    // .on('error', err => {
+    //   console.log(err);
+    // })
+    // .on('progress', progress => {
+    //   console.log(
+    //     'Percent complete: %s, ETA: %s',
+    //     progress.percentComplete,
+    //     progress.eta
+    //   )
+    // });
     counter = 0;
   } catch (error)
   {
