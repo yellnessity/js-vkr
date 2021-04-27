@@ -13,6 +13,7 @@ const WebSocket = require("ws");
 const ws = new WebSocket('ws://localhost:5050/');
 
 let face = false;
+let fileStream = null;
 
 const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -138,21 +139,33 @@ app.on("ready", async () =>
 
 let counter = 0;
 
+ipcMain.on("reload-app", (event, payload) => {
+  counter = 0;
+  face = false;
+})
+
 ipcMain.on("process-blob", (event, buffer) =>
 {
   try
   {
     console.log(buffer.length);
     let buf = null;
-    const fileStream = new Readable();
+    fileStream = new Readable();
     fileStream._read = () => { };
     fileStream.push(buffer);
     fileStream.push(null);
-    fileStream.on("data", (chunk) => {
+    fileStream.on("data", function(chunk) {
       let pos = 0;
-      console.log("chunk: ", chunk.length);
+      console.log("chunk number: ", counter);
       while (pos < chunk.length)
       {
+        if (face) {
+          console.log('face!!!');
+          event.reply('face');
+          fileStream.destroy();
+          return;
+        }
+
         if (!buf)
         {
           buf = chunk;
@@ -189,18 +202,19 @@ ipcMain.on("process-blob", (event, buffer) =>
           return;
         }
 
-        let header = buf[pos];
-        let obj = {
-            forbidden_zero_bit: (header & 0x80) >> 7,
-            nal_ref_idc: (header & 0x60) >> 5,
-            nal_unit_type: (header & 0x1F)
-        };
-        console.log('==================');
-        console.log(
-            '0x' + numPadding(pos, 8, '0', 16),
-            '0x' + numPadding(header, 2, '0', 16),
-            obj,
-        );
+        // let header = buf[pos];
+        // let obj = {
+        //     forbidden_zero_bit: (header & 0x80) >> 7,
+        //     nal_ref_idc: (header & 0x60) >> 5,
+        //     nal_unit_type: (header & 0x1F)
+        // };
+        // console.log('==================');
+        // console.log(
+        //     '0x' + numPadding(pos, 8, '0', 16),
+        //     '0x' + numPadding(header, 2, '0', 16),
+        //     obj,
+        // );
+
         ++pos;  // пропускаем header?
         if (pos >= buf.length)
         {
@@ -222,7 +236,7 @@ ipcMain.on("process-blob", (event, buffer) =>
 
         let finish = pos;
 
-        counter++;
+
         let target = Buffer.alloc(finish - start + 4); // + 4 bytes для обозначения порядка фрейма
         target.writeInt32BE(counter, 0);
         buf.copy(target, 4, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
@@ -239,10 +253,6 @@ ipcMain.on("process-blob", (event, buffer) =>
         //   console.log('bytes left: ', buf.length);
         // }
 
-        if (face) {
-          console.log('face');
-        }
-
         // console.log('tmp: ', buf);
 
         // вывести target проверить запись порядка фрейма
@@ -253,19 +263,20 @@ ipcMain.on("process-blob", (event, buffer) =>
         )
         {
           if (err) throw err;
-          console.log("Fragment " + " sent to " + "0.0.0.0" + ":" + 41234);
+          // console.log("Fragment " + " sent to " + "0.0.0.0" + ":" + 41234);
         });
       }
     });
     fileStream.on("end", () => {
-      client.send('end', 41234, "0.0.0.0", function(
-        err,
-        bytes
-      )
-      {
-        if (err) throw err;
-        console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
-      });
+      // client.send('end', 41234, "0.0.0.0", function(
+      //   err,
+      //   bytes
+      // )
+      // {
+      //   if (err) throw err;
+      //   console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
+      // });
+      counter++;
     });
   } catch (error)
   {

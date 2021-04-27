@@ -22,7 +22,6 @@ function heartbeat() {
 
 const wss = new WebSocket.Server({ port: 5050 });
 let ws;
-const port = 9000;
 
 wss.on('connection', (socket) => {
   ws = socket;
@@ -55,7 +54,6 @@ socket.on('listening', () => {
   console.log(`server udp listening ${address.address}:${address.port}`);
 });
 
-let buf = null;
 let counter = 0;
 
 const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
@@ -63,11 +61,13 @@ const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
 // let writeStream = fs.createWriteStream('video.h264');
 
 socket.on('message', (msg, rinfo) => {
+
   // if (buf) {
   //   buf = Buffer.concat([buf, msg]);
   // } else {
   //   buf = msg;
   // }
+
   if (Buffer.isBuffer(msg) && msg.toString() !== 'end') {
     counter++;
     // const fragmentNumber = msg.slice(0, 4);
@@ -99,33 +99,17 @@ socket.on('message', (msg, rinfo) => {
         if (multiScale.objects.length >= 1 && ws) {
           console.log('got a face!');
           ws.send('got face');
+          let date = new Date();
+          let datetime = date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + " " + date.getHours() + "-" + date.getMinutes();
+          cv.imwrite(`frames/${datetime}.jpg`, mat);
         }
       }
     }
 
-    // writeStream.write(msg);
   }
   else {
-    console.log(msg.toString());
     counter = 0;
-    // writeStream.end();  // end stream on msg about ending
-    // fileStream.close();
   }
 });
-
-// writeStream.on('finish', () => {
-//   console.log('wrote all data to file');
-// });
-
-// io.on("connection", (socket) => {
-//   socket.on("join-room", (roomId, userId) => {
-//     socket.join(roomId);
-//     socket.to(roomId).broadcast.emit("user-connected", userId);
-
-//     socket.on("disconnect", () => {
-//       socket.to(roomId).broadcast.emit("user-disconnected", userId);
-//     });
-//   });
-// });
 
 socket.bind(41234);

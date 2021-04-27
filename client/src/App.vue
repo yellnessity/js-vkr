@@ -2,6 +2,7 @@
   <div id="app">
     <img src="./assets/white.png" width="200" style="padding: 1.5rem" />
     <VideoRecorder
+      ref="video-recorder"
       :playTrigger="playTrigger"
       :recordTrigger="recordTrigger"
       @finishedRecord="onFinishedRecord"
@@ -10,9 +11,7 @@
     />
     <button @click="reload">Перезапуск</button>
     <button @click="recordTrigger = true">Записать</button>
-    <button @click="saveVideo">Отправить</button>
-    <p v-if="loading">Идёт отправка...</p>
-    <p v-if="loaded">Видео отправлено.</p>
+    <p v-if="face">Лицо обнаружено.</p>
   </div>
 </template>
 
@@ -31,11 +30,15 @@ export default {
       playTrigger: false,
       recordTrigger: false,
       file: null,
-      loading: false,
-      loaded: false
+      face: false
     };
   },
-  mounted() {},
+  mounted() {
+    ipcRenderer.on('face', () => {
+      this.face = true;
+      this.$refs['video-recorder'].player.record().stop();
+    })
+  },
   methods: {
     sendVideo() {
       console.log("video");
@@ -46,38 +49,25 @@ export default {
       ipcRenderer.send("on-finish-record");
     },
     reload() {
-      this.loaded = false;
-      this.loading = false;
       this.recordTrigger = false;
-      this.playTrigger = true
-    },
-    saveVideo() {
-      this.loading = true;
-      this.loaded = false;
-      let reader = new FileReader();
-      reader.onload = function() {
-        if (reader.readyState == 2) {
-          var buffer = new Buffer.from(reader.result);
-          ipcRenderer.send("save-video", 'video.webm', buffer);
-        }
-      };
-      ipcRenderer.on("on-video-save", () => {
-        this.loading = false;
-        this.loaded = true;
-        console.log('video have been saved')
-      });
-      reader.readAsArrayBuffer(this.file);
+      this.playTrigger = true;
+      this.face = false;
+      this.$refs['video-recorder'].player.record().reset();
+      this.$refs['video-recorder'].player.record().getDevice();
+      ipcRenderer.send("reload-app");
     },
     processBlob(blob) {
-      console.log("blob: ", blob.length);
-      let reader = new FileReader();
-      reader.onload = function() {
-        if (reader.readyState == 2) {
-          var buffer = new Buffer.from(reader.result);
-          ipcRenderer.send("process-blob", buffer);
-        }
-      };
-      reader.readAsArrayBuffer(blob);
+      if (blob && !this.face) {
+        console.log("blob: ", blob.length);
+        let reader = new FileReader();
+        reader.onload = function() {
+          if (reader.readyState == 2) {
+            var buffer = new Buffer.from(reader.result);
+            ipcRenderer.send("process-blob", buffer);
+          }
+        };
+        reader.readAsArrayBuffer(blob);
+      }
     }
   },
 };

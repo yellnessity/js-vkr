@@ -55,7 +55,6 @@ export default {
           record: {
             audio: false,
             pip: false,
-            maxLength: 5,
             video: true,
             debug: true,
             videoMimeType: "video/webm;codecs=h264",
@@ -129,12 +128,10 @@ export default {
         // stream data
         // console.log('array of blobs: ', this.player.recordedData);
 
-        // if (this.player.recordedData.length === 1) {
-        //   this.$emit("onBlob", this.player.recordedData[0]);
-        //   this.$emit("finishedRecord", this.player.recordedData[0]);
-        // }
-
-        console.log('the last blob ', this.player.recordedData.pop());
+        if (this.player.recordedData.length >= 1) {
+          console.log('the last blob ', this.player.recordedData[this.player.recordedData.length - 1]);
+          this.$emit("onBlob", this.player.recordedData[this.player.recordedData.length - 1]);
+        }
 
         // or construct a single blob:
         // var blob = new Blob(blobs, {
