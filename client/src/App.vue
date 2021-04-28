@@ -16,7 +16,11 @@
 </template>
 
 <script>
+import Vue from 'vue';
 import VideoRecorder from "./components/VideoRecorder.vue";
+import VueNativeSock from 'vue-native-websocket';
+
+Vue.use(VueNativeSock, 'ws://localhost:5050');
 
 let { ipcRenderer } = window.require("electron");
 
@@ -30,18 +34,31 @@ export default {
       playTrigger: false,
       recordTrigger: false,
       file: null,
-      face: false
+      face: false,
+      session: null
     };
   },
   mounted() {
-    ipcRenderer.on('face', () => {
-      this.face = true;
-      this.$refs['video-recorder'].player.record().stop();
-    })
+    this.$socket.onopen = () => this.$socket.send('start');
+    this.$socket.onmessage = (event) => {
+      if (event.data === 'got face') {
+        this.face = true;
+        this.$refs['video-recorder'].player.record().stop();
+      }
+      else this.session = event.data;
+    };
+  },
+  beforeDestroy() {
+    this.$disconnect();
   },
   methods: {
     sendVideo() {
       console.log("video");
+    },
+    startRecord() {
+      if (this.session) {
+        this.$refs['video-recorder'].player.record().start();
+      }
     },
     onFinishedRecord(video) {
       this.file = video;
@@ -49,6 +66,7 @@ export default {
       ipcRenderer.send("on-finish-record");
     },
     reload() {
+      this.$socket.send('start');
       this.recordTrigger = false;
       this.playTrigger = true;
       this.face = false;

@@ -10,14 +10,12 @@ const { Readable } = require("stream");
 const hbjs = require("handbrake-js");
 const WebSocket = require("ws");
 
-const ws = new WebSocket('ws://localhost:5050/');
+const isDevelopment = process.env.NODE_ENV !== "production";
 
 let face = false;
 let fileStream = null;
-
-const isDevelopment = process.env.NODE_ENV !== "production";
-
-var client = dgram.createSocket("udp4");
+let session;
+var client;
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -90,16 +88,6 @@ function numPadding(num, paddingSize, value = ' ', radix = 10)
     return s;
 }
 
-ws.on('open', function open() {
-  ws.send('something');
-});
-
-ws.on('message', (data) => {
-  if (data === 'got face') {
-    face = true;
-  }
-});
-
 // Quit when all windows are closed.
 app.on("window-all-closed", () =>
 {
@@ -135,6 +123,7 @@ app.on("ready", async () =>
     }
   }
   createWindow();
+  client = dgram.createSocket("udp4");
 });
 
 let counter = 0;
@@ -142,6 +131,7 @@ let counter = 0;
 ipcMain.on("reload-app", (event, payload) => {
   counter = 0;
   face = false;
+  client = dgram.createSocket("udp4");
 })
 
 ipcMain.on("process-blob", (event, buffer) =>
@@ -156,12 +146,9 @@ ipcMain.on("process-blob", (event, buffer) =>
     fileStream.push(null);
     fileStream.on("data", function(chunk) {
       let pos = 0;
-      console.log("chunk number: ", counter);
       while (pos < chunk.length)
       {
         if (face) {
-          console.log('face!!!');
-          event.reply('face');
           fileStream.destroy();
           return;
         }
@@ -202,18 +189,19 @@ ipcMain.on("process-blob", (event, buffer) =>
           return;
         }
 
-        // let header = buf[pos];
-        // let obj = {
-        //     forbidden_zero_bit: (header & 0x80) >> 7,
-        //     nal_ref_idc: (header & 0x60) >> 5,
-        //     nal_unit_type: (header & 0x1F)
-        // };
-        // console.log('==================');
-        // console.log(
-        //     '0x' + numPadding(pos, 8, '0', 16),
-        //     '0x' + numPadding(header, 2, '0', 16),
-        //     obj,
-        // );
+        let header = buf[pos];
+        let obj = {
+            forbidden_zero_bit: (header & 0x80) >> 7,
+            nal_ref_idc: (header & 0x60) >> 5,
+            nal_unit_type: (header & 0x1F)
+        };
+        if (obj.nal_unit_type === 5)
+          console.log(
+              '0x' + numPadding(pos, 8, '0', 16),
+              '0x' + numPadding(header, 2, '0', 16),
+              obj,
+              'fragment number ' + counter
+          );
 
         ++pos;  // пропускаем header?
         if (pos >= buf.length)
@@ -237,9 +225,10 @@ ipcMain.on("process-blob", (event, buffer) =>
         let finish = pos;
 
 
-        let target = Buffer.alloc(finish - start + 4); // + 4 bytes для обозначения порядка фрейма
+        let target = Buffer.alloc(finish - start + 8); // + 4 bytes для обозначения порядка фрейма
         target.writeInt32BE(counter, 0);
-        buf.copy(target, 4, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
+        target.writeInt32BE(session, 4);
+        buf.copy(target, 8, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
 
         // let tmp = Buffer.alloc(buf.length - finish);
         // buf.copy(tmp, 0, finish);
@@ -265,18 +254,9 @@ ipcMain.on("process-blob", (event, buffer) =>
           if (err) throw err;
           // console.log("Fragment " + " sent to " + "0.0.0.0" + ":" + 41234);
         });
+
+        counter++;
       }
-    });
-    fileStream.on("end", () => {
-      // client.send('end', 41234, "0.0.0.0", function(
-      //   err,
-      //   bytes
-      // )
-      // {
-      //   if (err) throw err;
-      //   console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
-      // });
-      counter++;
     });
   } catch (error)
   {

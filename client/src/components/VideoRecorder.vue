@@ -143,8 +143,8 @@ export default {
     this.player.on("finishRecord", () => {
       // the blob object contains the recorded data that
       // can be downloaded by the user, stored on server etc.
-      console.log("finished recording: ");
-      // this.$emit("finishedRecord", this.player.recordedData);
+      console.log("finished recording");
+      this.$emit("finishedRecord");
     });
 
     this.player.on("startConvert", () => {
