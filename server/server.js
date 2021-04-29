@@ -12,8 +12,13 @@ const cors = require('cors');
 const fs = require("fs");
 
 const socket = dgram.createSocket('udp4');
-// app.set("view engine", "ejs");
-// app.use(express.static("public"));
+
+let currentNumber = 0;
+let queue = [];
+let face = false;
+let session = null;
+let received_sps = false;
+let received_pps = false;
 
 function noop() {}
 
@@ -32,9 +37,9 @@ wss.on('connection', (socket) => {
     console.log('websocket got message ', data);
     switch (data) {
       case 'start':
-        let id = crypto.randomBytes(2).toString('hex');
-        ws.send(id);
-        console.log('session id: ', id);
+        session = crypto.randomBytes(4).toString('hex');
+        ws.send(session);
+        console.log('session id: ', session);
         break;
       default:
         break;
@@ -54,11 +59,13 @@ const interval = setInterval(function ping()
 }, 30000);
 
 wss.on('close', function close() {
+  console.log('ws connection was closed');
   clearInterval(interval);
 });
 
 socket.on('listening', () => {
   const address = socket.address();
+  console.log('=======================================================');
   console.log(`server udp listening ${address.address}:${address.port}`);
 });
 
@@ -66,30 +73,12 @@ socket.on('connect', () => {
   console.log('connected!');
 })
 
-let currentNumber = 0;
-let queue = [];
-let face = false;
-
 const classifier = new cv.CascadeClassifier(cv.HAAR_FRONTALFACE_ALT2);
 
 function decode(msg, number) {
   msg = msg.slice(4);
   let frame = null;
-  // console.log('decoding fragment ', number);
-
-  // let header = buf[pos];
-  // let obj = {
-  //     forbidden_zero_bit: (header & 0x80) >> 7,
-  //     nal_ref_idc: (header & 0x60) >> 5,
-  //     nal_unit_type: (header & 0x1F)
-  // };
-  // if (obj.nal_unit_type === 7 || obj.nal_unit_type === 8)
-  //   console.log(
-  //       '0x' + numPadding(pos, 8, '0', 16),
-  //       '0x' + numPadding(header, 2, '0', 16),
-  //       obj,
-  //       'fragment number ' + counter
-  //   );
+  console.log('decoding fragment ', number);
 
   try {
     frame = Decoder.decode(msg);
@@ -103,13 +92,17 @@ function decode(msg, number) {
     // cv.imshow('img', mat);
     cv.waitKey(33);
     if (frame.data) {
-      // cv.imwrite(`frames/${counter}.jpg`, mat);
       const multiScale = classifier.detectMultiScale(mat); // imitation of face recognition
       // console.log(multiScale);
       if (multiScale.objects.length >= 1 && ws) {
         console.log('got a face! fragment number ', number);
         ws.send('got face');
         face = true;
+        session = null;
+        currentNumber = 0;
+        queue.length = 0;
+        received_pps = false;
+        received_sps = false;
         let date = new Date();
         let datetime = date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + " " + date.getHours() + "-" + date.getMinutes();
         cv.imwrite(`frames/${datetime}.jpg`, mat);
@@ -121,31 +114,54 @@ function decode(msg, number) {
 socket.on('message', (msg, rinfo) => {
   if (Buffer.isBuffer(msg)) {
     const fragmentNumber = msg.slice(0, 4).readInt32BE();
+    const fragmentSession = msg.slice(4, 8).toString('hex');
 
-    let header = msg[4];
+    let header = msg[12];
     let obj = {
         forbidden_zero_bit: (header & 0x80) >> 7,
         nal_ref_idc: (header & 0x60) >> 5,
         nal_unit_type: (header & 0x1F)
     };
 
-    if (currentNumber === fragmentNumber) {
-      console.log('decoding as usual');
-      decode(msg, fragmentNumber);
-      currentNumber++;
+    if (session && fragmentSession === session && received_sps && received_pps) {
+
+      // console.log('nal unit type: ', obj.nal_unit_type);
+
+      if (currentNumber === fragmentNumber) {
+        console.log('decoding as usual');
+        decode(msg, fragmentNumber);
+        currentNumber++;
+      }
+      else if (obj.nal_unit_type === 5) {
+        console.log('recieved and IDR with fragment number greater or smaller than the current');
+        queue.length = 0;
+        currentNumber = fragmentNumber; // сделать проверку на входе, если больше
+        decode(msg, fragmentNumber);
+        currentNumber++;
+      }
+      else {
+        // console.log('current number: ', currentNumber);
+        // console.log('fragment number: ', fragmentNumber);
+        queue[fragmentNumber] = msg;
+      }
+
       while (queue[currentNumber] !== undefined) {
         decode(queue[currentNumber], currentNumber);
         currentNumber++;
       }
+
     }
-    else if (obj.nal_unit_type === 5) {
-      currentNumber = fragmentNumber;
+    else if (session && fragmentSession === session && obj.nal_unit_type === 7) {
       decode(msg, fragmentNumber);
-      currentNumber++;
+      currentNumber = fragmentNumber + 1;
+      received_sps = true;
     }
-    else {
-      // console.log('current number: ', currentNumber);
-      // console.log('fragment number: ', fragmentNumber);
+    else if (session && fragmentSession === session && received_sps && obj.nal_unit_type === 8) {
+      decode(msg, fragmentNumber);
+      currentNumber = fragmentNumber + 1;
+      received_pps = true;
+    }
+    else if (session && fragmentSession === session) {
       queue[fragmentNumber] = msg;
     }
 

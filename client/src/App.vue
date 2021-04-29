@@ -10,7 +10,7 @@
       id="video"
     />
     <button @click="reload">Перезапуск</button>
-    <button @click="recordTrigger = true">Записать</button>
+    <button v-if="!face" :disabled="!session" @click="recordTrigger = true">Записать</button>
     <p v-if="face">Лицо обнаружено.</p>
   </div>
 </template>
@@ -20,7 +20,9 @@ import Vue from 'vue';
 import VideoRecorder from "./components/VideoRecorder.vue";
 import VueNativeSock from 'vue-native-websocket';
 
-Vue.use(VueNativeSock, 'ws://localhost:5050');
+Vue.use(VueNativeSock, 'ws://localhost:5050', {
+  reconnection: true, // (Boolean) whether to reconnect automatically (false)
+});
 
 let { ipcRenderer } = window.require("electron");
 
@@ -41,15 +43,16 @@ export default {
   mounted() {
     this.$socket.onopen = () => this.$socket.send('start');
     this.$socket.onmessage = (event) => {
-      if (event.data === 'got face') {
+      if (event.data === 'got face' && !this.face) {
         this.face = true;
+        this.session = null;
         this.$refs['video-recorder'].player.record().stop();
       }
-      else this.session = event.data;
+      else {
+        this.session = event.data;
+        ipcRenderer.send("on-session", this.session);
+      }
     };
-  },
-  beforeDestroy() {
-    this.$disconnect();
   },
   methods: {
     sendVideo() {
@@ -67,12 +70,13 @@ export default {
     },
     reload() {
       this.$socket.send('start');
+      console.log(this.$socket);
+      ipcRenderer.send("reload-app");
       this.recordTrigger = false;
       this.playTrigger = true;
       this.face = false;
       this.$refs['video-recorder'].player.record().reset();
       this.$refs['video-recorder'].player.record().getDevice();
-      ipcRenderer.send("reload-app");
     },
     processBlob(blob) {
       if (blob && !this.face) {
@@ -114,5 +118,9 @@ button {
   border: none;
   border-radius: .2rem;
   color: white;
+}
+
+button:disabled {
+  background: gray;
 }
 </style>

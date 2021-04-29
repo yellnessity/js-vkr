@@ -14,7 +14,7 @@ const isDevelopment = process.env.NODE_ENV !== "production";
 
 let face = false;
 let fileStream = null;
-let session;
+let session = null;
 var client;
 
 // Scheme must be registered before the app is ready
@@ -134,6 +134,10 @@ ipcMain.on("reload-app", (event, payload) => {
   client = dgram.createSocket("udp4");
 })
 
+ipcMain.on("on-session", (event, payload) => {
+  session = payload;
+})
+
 ipcMain.on("process-blob", (event, buffer) =>
 {
   try
@@ -195,7 +199,7 @@ ipcMain.on("process-blob", (event, buffer) =>
             nal_ref_idc: (header & 0x60) >> 5,
             nal_unit_type: (header & 0x1F)
         };
-        if (obj.nal_unit_type === 5)
+        if (obj.nal_unit_type === 5 || obj.nal_unit_type === 7 || obj.nal_unit_type === 8)
           console.log(
               '0x' + numPadding(pos, 8, '0', 16),
               '0x' + numPadding(header, 2, '0', 16),
@@ -225,9 +229,9 @@ ipcMain.on("process-blob", (event, buffer) =>
         let finish = pos;
 
 
-        let target = Buffer.alloc(finish - start + 8); // + 4 bytes для обозначения порядка фрейма
+        let target = Buffer.alloc(finish - start + 8); // + 4 bytes для обозначения порядка фрейма +4 bytes for session
         target.writeInt32BE(counter, 0);
-        target.writeInt32BE(session, 4);
+        target.write(session, 4, 4,'hex');
         buf.copy(target, 8, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
 
         // let tmp = Buffer.alloc(buf.length - finish);
@@ -245,7 +249,6 @@ ipcMain.on("process-blob", (event, buffer) =>
         // console.log('tmp: ', buf);
 
         // вывести target проверить запись порядка фрейма
-
         client.send(target, 0, target.length, 41234, "0.0.0.0", function(
           err,
           bytes
