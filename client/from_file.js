@@ -65,7 +65,7 @@ function nal_unit(buf, pos)
         nal_ref_idc: (header & 0x60) >> 5,
         nal_unit_type: (header & 0x1F)
     };
-    if (obj.nal_unit_type === 7 || obj.nal_unit_type === 8) console.log(
+    if (obj.nal_unit_type === 5) console.log(
         '0x' + numPadding(pos, 8, '0', 16),
         '0x' + numPadding(header, 2, '0', 16),
         obj,
@@ -113,14 +113,14 @@ function byte_stream_nal_unit(buf, pos)
     buf.copy(target, 8, start, finish);
 
     // вывести target проверить запись порядка фрейма
-    client.send(target, 0, target.length, 41234, "0.0.0.0", function(
-        err,
-        bytes
-    )
-    {
-        if (err) throw err;
-    });
-    // tmpArray.push(target);
+    // client.send(target, 0, target.length, 41234, "0.0.0.0", function(
+    //     err,
+    //     bytes
+    // )
+    // {
+    //     if (err) throw err;
+    // });
+    tmpArray.push(target);
     return pos;
 }
 
@@ -159,27 +159,27 @@ ws.on('message', function incoming(data)
                 counter++;
             }
         });
-        // fileStream.on('end', function()
-        // {
-        //     if (tmpArray.length > 0)
-        //     {
-        //         for (let i = tmpArray.length - 1; i > 0; i--)
-        //         {
-        //             let j = Math.floor(Math.random() * (i + 1));
-        //             [tmpArray[i], tmpArray[j]] = [tmpArray[j], tmpArray[i]];
-        //         }
-        //         for (let i = 0; i < tmpArray.length; i++) {
-        //             if (i < 2) console.log(tmpArray[i]);
-        //             client.send(tmpArray[i], 0, tmpArray[i].length, 41234, "0.0.0.0", function(
-        //                 err,
-        //                 bytes
-        //             )
-        //             {
-        //                 if (err) throw err;
-        //             });
-        //         }
+        fileStream.on('end', function()
+        {
+            if (tmpArray.length > 0)
+            {
+                for (let i = tmpArray.length - 1; i > 0; i--)
+                {
+                    let j = Math.floor(Math.random() * (i + 1));
+                    [tmpArray[i], tmpArray[j]] = [tmpArray[j], tmpArray[i]];
+                }
+                for (let i = 0; i < tmpArray.length; i++) {
+                    if (i < 2) console.log(tmpArray[i]);
+                    client.send(tmpArray[i], 0, tmpArray[i].length, 41234, "0.0.0.0", function(
+                        err,
+                        bytes
+                    )
+                    {
+                        if (err) throw err;
+                    });
+                }
 
-        //     }
-        // });
+            }
+        });
     }
 });

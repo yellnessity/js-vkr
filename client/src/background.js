@@ -88,6 +88,83 @@ function numPadding(num, paddingSize, value = ' ', radix = 10)
     return s;
 }
 
+function start_code_prefix_one_3bytes(buf, pos)
+{
+    if (!is_one_3bytes(buf, pos))
+    {
+        throw new Error('start_code_prefix_one_3bytes');
+    }
+
+    return pos + 3;
+}
+
+function nal_unit(buf, pos)
+{
+    let header = buf[pos];
+    let obj = {
+        forbidden_zero_bit: (header & 0x80) >> 7,
+        nal_ref_idc: (header & 0x60) >> 5,
+        nal_unit_type: (header & 0x1F)
+    };
+    if (obj.nal_unit_type === 7 || obj.nal_unit_type === 8) console.log(
+        '0x' + numPadding(pos, 8, '0', 16),
+        '0x' + numPadding(header, 2, '0', 16),
+        obj,
+    );
+    ++pos;
+
+    return pos;
+}
+
+function byte_stream_nal_unit(buf, pos)
+{
+    if (pos >= buf.length)
+    {
+        return pos;
+    }
+
+    while (!is_one_3bytes(buf, pos)
+        && !is_one_4bytes(buf, pos))
+    {
+        ++pos;
+        if (pos >= buf.length) return pos;
+    }
+
+    let start = pos;
+
+    if (!is_one_3bytes(buf, pos))
+    {
+        ++pos;
+    }
+
+    pos = start_code_prefix_one_3bytes(buf, pos);
+    pos = nal_unit(buf, pos);
+
+    while (!is_one_3bytes(buf, pos)
+        && !is_one_4bytes(buf, pos)
+        && pos < buf.length)
+    {
+        ++pos;
+    }
+
+    let finish = pos;
+    let target = Buffer.alloc(finish - start + 8);
+    target.writeInt32BE(counter, 0);
+    target.write(session, 4, 4, 'hex');
+    buf.copy(target, 8, start, finish);
+
+    // вывести target проверить запись порядка фрейма
+    client.send(target, 0, target.length, 41234, "0.0.0.0", function(
+        err,
+        bytes
+    )
+    {
+        if (err) throw err;
+    });
+
+    return pos;
+}
+
 // Quit when all windows are closed.
 app.on("window-all-closed", () =>
 {
@@ -150,115 +227,16 @@ ipcMain.on("process-blob", (event, buffer) =>
     fileStream.push(null);
     fileStream.on("data", function(chunk) {
       let pos = 0;
-      while (pos < chunk.length)
-      {
-        if (face) {
-          fileStream.destroy();
-          return;
-        }
-
-        if (!buf)
-        {
-          buf = chunk;
-        }
-
-        while (!is_one_3bytes(buf, pos) && !is_one_4bytes(buf, pos))
-        {
-          ++pos;
-          if (pos >= buf.length)
+      while (pos < chunk.length) {
+          if (!session)
           {
-            return;
+              fileStream.destroy();
+              return;
           }
-        }
 
-        let start = pos;
+          pos = byte_stream_nal_unit(chunk, pos);
 
-        if (!is_one_3bytes(buf, pos))
-        {
-          ++pos;
-          if (pos >= buf.length)
-          {
-            return;
-          }
-        }
-
-        if (!is_one_3bytes(buf, pos))
-        {
-          throw new Error("start_code_prefix_one_3bytes");
-        }
-
-        pos += 3;
-        if (pos >= buf.length)
-        {
-          return;
-        }
-
-        let header = buf[pos];
-        let obj = {
-            forbidden_zero_bit: (header & 0x80) >> 7,
-            nal_ref_idc: (header & 0x60) >> 5,
-            nal_unit_type: (header & 0x1F)
-        };
-        if (obj.nal_unit_type === 5 || obj.nal_unit_type === 7 || obj.nal_unit_type === 8)
-          console.log(
-              '0x' + numPadding(pos, 8, '0', 16),
-              '0x' + numPadding(header, 2, '0', 16),
-              obj,
-              'fragment number ' + counter
-          );
-
-        ++pos;  // пропускаем header?
-        if (pos >= buf.length)
-        {
-          return;
-        }
-
-        while (
-          !is_one_3bytes(buf, pos) &&
-          !is_one_4bytes(buf, pos) &&
-          pos < buf.length
-        )
-        {
-          ++pos;
-          if (pos >= buf.length)
-          {
-            return;
-          }
-        }
-
-        let finish = pos;
-
-
-        let target = Buffer.alloc(finish - start + 8); // + 4 bytes для обозначения порядка фрейма +4 bytes for session
-        target.writeInt32BE(counter, 0);
-        target.write(session, 4, 4,'hex');
-        buf.copy(target, 8, start, finish); // 0 + 4 & Buffer.write int32 записать номер фрейма
-
-        // let tmp = Buffer.alloc(buf.length - finish);
-        // buf.copy(tmp, 0, finish);
-        // buf = tmp;
-        // if (counter <= 5) {
-        //   console.log('target: ', target);
-        //   console.log('target length: ', target.length);
-        //   console.log('start: ', start);
-        //   console.log('finish: ', finish);
-        //   console.log('counter: ', counter);
-        //   console.log('bytes left: ', buf.length);
-        // }
-
-        // console.log('tmp: ', buf);
-
-        // вывести target проверить запись порядка фрейма
-        client.send(target, 0, target.length, 41234, "0.0.0.0", function(
-          err,
-          bytes
-        )
-        {
-          if (err) throw err;
-          // console.log("Fragment " + " sent to " + "0.0.0.0" + ":" + 41234);
-        });
-
-        counter++;
+          counter++;
       }
     });
   } catch (error)
@@ -270,18 +248,11 @@ ipcMain.on("process-blob", (event, buffer) =>
 ipcMain.on("on-finish-record", (event) =>
 {
   counter = 0;
-  // client.send('end', 41234, "0.0.0.0", function(
-  //   err,
-  //   bytes
-  // )
-  // {
-  //   if (err) throw err;
-  //   console.log("UDP message sent to " + "0.0.0.0" + ":" + 41234);
-  // });
 });
 
 ipcMain.on("save-video", async (event, path, buffer) =>
 {
+  console.log('saving video');
   try
   {
     await fse.outputFile(path, buffer);

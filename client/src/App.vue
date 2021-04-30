@@ -67,6 +67,7 @@ export default {
       this.file = video;
       console.log("video recorded", video);
       ipcRenderer.send("on-finish-record");
+      ipcRenderer.send("save-video", "video.mp4", this.file);
     },
     reload() {
       this.$socket.send('start');

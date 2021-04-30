@@ -19,19 +19,19 @@ import "webrtc-adapter";
 import RecordRTC from "recordrtc";
 import Record from "videojs-record/dist/videojs.record.js";
 
-import FFmpegWasmEngine from 'videojs-record/dist/plugins/videojs.record.ffmpeg-wasm.js';
-import FFmpeg from '../../node_modules/@ffmpeg/ffmpeg/dist/ffmpeg.min.js';
+import FFmpegWasmEngine from "videojs-record/dist/plugins/videojs.record.ffmpeg-wasm.js";
+import FFmpeg from "../../node_modules/@ffmpeg/ffmpeg/dist/ffmpeg.min.js";
 
 export default {
   name: "VideoRecorder",
   props: {
     recordTrigger: {
       type: Boolean,
-      default: false
+      default: false,
     },
     playTrigger: {
       type: Boolean,
-      default: false
+      default: false,
     },
   },
   data() {
@@ -73,7 +73,7 @@ export default {
   },
   mounted() {
     /* eslint-disable no-console */
-    this.player = videojs('videoRecord', this.options, () => {
+    this.player = videojs("videoRecord", this.options, () => {
       // print version information at startup
       var msg =
         "Using video.js " +
@@ -110,7 +110,7 @@ export default {
       this.device = this.devices[0].value;
     });
 
-    this.player.on("enumerateError", function() {
+    this.player.on("enumerateError", function () {
       console.warn("enumerate error:", this.player.enumerateErrorCode);
     });
 
@@ -120,36 +120,31 @@ export default {
     });
 
     // monitor stream data during recording
-    this.player.on('timestamp', () => {
-        // timestamps
-        // console.log('current timestamp: ', this.player.currentTimestamp);
-        // console.log('all timestamps: ', this.player.allTimestamps);
+    this.player.on("timestamp", () => {
 
-        // stream data
-        // console.log('array of blobs: ', this.player.recordedData);
-
-        if (this.player.recordedData.length >= 1) {
-          console.log('the last blob ', this.player.recordedData[this.player.recordedData.length - 1]);
-          this.$emit("onBlob", this.player.recordedData[this.player.recordedData.length - 1]);
-        }
-
-        // or construct a single blob:
-        // var blob = new Blob(blobs, {
-        //     type: 'video/webm'
-        // });
+      if (this.player.recordedData.length >= 1) {
+        console.log(
+          "the last blob ",
+          this.player.recordedData[this.player.recordedData.length - 1]
+        );
+        this.$emit(
+          "onBlob",
+          this.player.recordedData[this.player.recordedData.length - 1]
+        );
+      }
     });
 
     // user completed recording and stream is available
     this.player.on("finishRecord", () => {
       // the blob object contains the recorded data that
       // can be downloaded by the user, stored on server etc.
-      console.log("finished recording");
-      this.$emit("finishedRecord");
+      console.log("finished recording", this.player.recordedData);
+      // this.player.record().saveAs({'video': 'video.mp4'});
     });
 
     this.player.on("startConvert", () => {
-      console.log('started converting');
-    })
+      console.log("started converting");
+    });
 
     // error handling
     this.player.on("error", (element, error) => {

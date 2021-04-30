@@ -37,6 +37,10 @@ wss.on('connection', (socket) => {
     console.log('websocket got message ', data);
     switch (data) {
       case 'start':
+        currentNumber = 0;
+        queue = [];
+        received_sps = false;
+        received_pps = false;
         session = crypto.randomBytes(4).toString('hex');
         ws.send(session);
         console.log('session id: ', session);
@@ -132,10 +136,9 @@ socket.on('message', (msg, rinfo) => {
         decode(msg, fragmentNumber);
         currentNumber++;
       }
-      else if (obj.nal_unit_type === 5) {
-        console.log('recieved and IDR with fragment number greater or smaller than the current');
-        queue.length = 0;
-        currentNumber = fragmentNumber; // сделать проверку на входе, если больше
+      else if (obj.nal_unit_type === 5 && fragmentNumber > currentNumber) {
+        console.log('recieved and IDR with fragment number greater than the current');
+        currentNumber = fragmentNumber;
         decode(msg, fragmentNumber);
         currentNumber++;
       }
@@ -150,16 +153,28 @@ socket.on('message', (msg, rinfo) => {
         currentNumber++;
       }
 
+      console.log('objects from queue were decoded');
+
     }
     else if (session && fragmentSession === session && obj.nal_unit_type === 7) {
       decode(msg, fragmentNumber);
       currentNumber = fragmentNumber + 1;
       received_sps = true;
     }
-    else if (session && fragmentSession === session && received_sps && obj.nal_unit_type === 8) {
-      decode(msg, fragmentNumber);
-      currentNumber = fragmentNumber + 1;
+    else if (session && fragmentSession === session && obj.nal_unit_type === 8) {
       received_pps = true;
+      if (received_sps) {
+        decode(msg, fragmentNumber);
+        currentNumber = fragmentNumber + 1;
+        console.log('received pps & sps and went to cycle');
+        while (queue[currentNumber] !== undefined) {
+          decode(queue[currentNumber], currentNumber);
+          currentNumber++;
+        }
+      }
+      else {
+        queue[fragmentNumber] = msg;
+      }
     }
     else if (session && fragmentSession === session) {
       queue[fragmentNumber] = msg;
