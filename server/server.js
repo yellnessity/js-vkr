@@ -19,6 +19,7 @@ let face = false;
 let session = null;
 let received_sps = false;
 let received_pps = false;
+let repeat_sps_pps = false;
 
 function noop() {}
 
@@ -41,6 +42,7 @@ wss.on('connection', (socket) => {
         queue = [];
         received_sps = false;
         received_pps = false;
+        repeat_sps_pps = false;
         session = crypto.randomBytes(4).toString('hex');
         ws.send(session);
         console.log('session id: ', session);
@@ -128,7 +130,6 @@ socket.on('message', (msg, rinfo) => {
     };
 
     if (session && fragmentSession === session && received_sps && received_pps) {
-
       // console.log('nal unit type: ', obj.nal_unit_type);
 
       if (currentNumber === fragmentNumber) {
@@ -143,20 +144,18 @@ socket.on('message', (msg, rinfo) => {
         currentNumber++;
       }
       else {
-        // console.log('current number: ', currentNumber);
-        // console.log('fragment number: ', fragmentNumber);
+        console.log('push number ', fragmentNumber, ' to queue');
         queue[fragmentNumber] = msg;
       }
 
       while (queue[currentNumber] !== undefined) {
+        console.log('got into cycle');
         decode(queue[currentNumber], currentNumber);
         currentNumber++;
       }
-
-      console.log('objects from queue were decoded');
-
     }
     else if (session && fragmentSession === session && obj.nal_unit_type === 7) {
+      console.log('recieved sps');
       decode(msg, fragmentNumber);
       currentNumber = fragmentNumber + 1;
       received_sps = true;
@@ -166,19 +165,29 @@ socket.on('message', (msg, rinfo) => {
       if (received_sps) {
         decode(msg, fragmentNumber);
         currentNumber = fragmentNumber + 1;
-        console.log('received pps & sps and went to cycle');
         while (queue[currentNumber] !== undefined) {
+          console.log('went to cycle after receiving sps & pps');
           decode(queue[currentNumber], currentNumber);
           currentNumber++;
         }
       }
       else {
+        console.log('push pps fragment ', fragmentNumber, ' to queue');
         queue[fragmentNumber] = msg;
       }
     }
     else if (session && fragmentSession === session) {
+      console.log('push number ', fragmentNumber, ' to queue when aint got pps or sps');
       queue[fragmentNumber] = msg;
     }
+
+    setTimeout(() => {
+      if ((!received_pps || !received_sps) && !face && !repeat_sps_pps) {
+        repeat_sps_pps = true;
+        console.log('ain`t got pps or sps');
+        ws.send('pls send pps or sps');
+      }
+    }, 3000);
 
   }
 });

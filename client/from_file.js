@@ -113,14 +113,14 @@ function byte_stream_nal_unit(buf, pos)
     buf.copy(target, 8, start, finish);
 
     // вывести target проверить запись порядка фрейма
-    // client.send(target, 0, target.length, 41234, "0.0.0.0", function(
-    //     err,
-    //     bytes
-    // )
-    // {
-    //     if (err) throw err;
-    // });
-    tmpArray.push(target);
+    client.send(target, 0, target.length, 41234, "0.0.0.0", function(
+        err,
+        bytes
+    )
+    {
+        if (err) throw err;
+    });
+    // tmpArray.push(target);
     return pos;
 }
 
@@ -136,6 +136,9 @@ ws.on('message', function incoming(data)
         session = null;
         counter = 0;
         console.log('face recognized');
+    }
+    else if (data === 'pls send pps or sps') {
+        console.log('pps or sps weren`t sent');
     }
     else
     {
@@ -159,27 +162,27 @@ ws.on('message', function incoming(data)
                 counter++;
             }
         });
-        fileStream.on('end', function()
-        {
-            if (tmpArray.length > 0)
-            {
-                for (let i = tmpArray.length - 1; i > 0; i--)
-                {
-                    let j = Math.floor(Math.random() * (i + 1));
-                    [tmpArray[i], tmpArray[j]] = [tmpArray[j], tmpArray[i]];
-                }
-                for (let i = 0; i < tmpArray.length; i++) {
-                    if (i < 2) console.log(tmpArray[i]);
-                    client.send(tmpArray[i], 0, tmpArray[i].length, 41234, "0.0.0.0", function(
-                        err,
-                        bytes
-                    )
-                    {
-                        if (err) throw err;
-                    });
-                }
+        // fileStream.on('end', function()
+        // {
+        //     if (tmpArray.length > 0)
+        //     {
+        //         for (let i = tmpArray.length - 1; i > 0; i--)
+        //         {
+        //             let j = Math.floor(Math.random() * (i + 1));
+        //             [tmpArray[i], tmpArray[j]] = [tmpArray[j], tmpArray[i]];
+        //         }
+        //         for (let i = 0; i < tmpArray.length; i++) {
+        //             if (i < 2) console.log(tmpArray[i]);
+        //             client.send(tmpArray[i], 0, tmpArray[i].length, 41234, "0.0.0.0", function(
+        //                 err,
+        //                 bytes
+        //             )
+        //             {
+        //                 if (err) throw err;
+        //             });
+        //         }
 
-            }
-        });
+        //     }
+        // });
     }
 });
